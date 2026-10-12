@@ -365,12 +365,22 @@ label {
         body: form
       });
       const body = await response.text();
-      if (!response.ok) throw new Error("HTTP " + response.status + (body ? ": " + body.slice(0, 180) : ""));
-      cloudStatus("Upload successful: " + filename);
+      let result = {};
+      try { result = body ? JSON.parse(body) : {}; } catch (_) {}
+      if (!response.ok) {
+        const detail = result.details || result.error || body;
+        throw new Error("HTTP " + response.status + (detail ? ": " + String(detail).slice(0, 240) : ""));
+      }
+      if (result.ok === false) throw new Error(result.error || "Worker reported an upload error.");
+      cloudStatus("Upload successful: " + filename + (result.path ? " → " + result.path : ""));
       message("Uploaded to cloud storage: " + filename);
     } catch (error) {
-      cloudStatus("Upload failed: " + error.message);
-      message("Cloud upload failed. Check Worker /upload API and CORS settings.");
+      let detail = error && error.message ? error.message : String(error);
+      if (detail === "Failed to fetch" || /NetworkError|Load failed/i.test(detail)) {
+        detail = "Browser could not reach /upload. Verify the deployed Worker supports POST /upload and OPTIONS CORS preflight; then check DevTools → Network. The root URL alone does not prove /upload works.";
+      }
+      cloudStatus("Upload failed: " + detail);
+      message("Cloud upload failed: " + detail);
     }
   }
 
