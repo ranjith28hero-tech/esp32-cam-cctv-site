@@ -82,7 +82,7 @@ button {
 button:hover { filter: brightness(1.15); }
 .primary { background: #0369a1; }
 .danger { background: #991b1b; }
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], input[type="password"] {
   width: 100%;
   background: #0b1120;
   color: white;
@@ -179,6 +179,7 @@ label {
       <button class="primary" id="connectBtn">Start Live View</button>
       <button id="refreshBtn">Reconnect</button>
       <button id="snapshotBtn">Take Snapshot</button>
+      <button class="primary" id="uploadSnapshotBtn">Upload Snapshot to GitHub</button>
       <button class="danger" id="recordBtn">Start Recording</button>
     </div>
 
@@ -203,8 +204,7 @@ label {
       <button id="clearBtn">Clear Recording List</button>
     </div>
     <p class="muted">
-      Recordings remain in browser memory until you close or reload this page.
-      Download videos to keep them.
+      Recordings remain in browser memory until you close or reload this page. Upload to GitHub or download videos to keep them.
     </p>
   </div>
 </section>
@@ -241,36 +241,16 @@ label {
   </div>
 
   <div class="panel">
-    <h2>GitHub Cloud Storage</h2>
-    <label for="workerURL">Cloudflare Worker URL</label>
-    <input id="workerURL" type="text" value="https://esp32-cam-cctv-data.ranjith28hero.workers.dev">
-    <label for="uploadPassword">Worker upload password</label>
-    <input id="uploadPassword" type="password" value="Ranjith28@" autocomplete="current-password">
-    <label>
-      <input id="autoUpload" type="checkbox" checked>
-      Automatically upload snapshots and completed recordings
-    </label>
-    <p class="muted">Uploads are sent to your Cloudflare Worker, which must implement the upload API described in the code notes.</p>
-    <div class="buttons">
-      <button class="primary" id="saveCloudBtn">Apply Cloud Settings</button>
-    </div>
-    <p class="muted" id="cloudStatus">Auto-upload enabled.</p>
-  </div>
+    <h2>GitHub Storage</h2>
+    <label for="storageEndpoint">Cloudflare Worker URL</label>
+    <input id="storageEndpoint" type="text" placeholder="https://your-worker.your-subdomain.workers.dev">
 
-  <div class="panel">
-    <h2>Continuous Cloud Recording</h2>
-    <label>
-      <input id="continuousRecord" type="checkbox" checked>
-      Start recording automatically when the camera connects and keep recording
-    </label>
-    <label for="segmentMinutes">Split recordings every (minutes)</label>
-    <select id="segmentMinutes">
-      <option value="1" selected>1 minute</option>
-      <option value="2">2 minutes</option>
-      <option value="5">5 minutes</option>
-      <option value="10">10 minutes</option>
-    </select>
-    <p class="muted">Each segment is saved in this page and uploaded to GitHub through your Cloudflare Worker when the segment closes. Keep this browser tab and computer awake. GitHub is not ideal for large or high-volume CCTV archives.</p>
+    <label for="uploadPassword">Upload password (Worker secret)</label>
+    <input id="uploadPassword" type="password" placeholder="Enter your upload password" autocomplete="current-password">
+
+    <button class="primary" id="saveStorageBtn">Save Storage Settings</button>
+    <p class="muted" id="storageStatus">Configure the Worker URL and upload password to save media in GitHub.</p>
+    <p class="muted">Uploads are limited to 8 MB each. Keep clips short. The GitHub token is stored only in the Worker, never in this page.</p>
   </div>
 
   <div class="panel">
@@ -302,7 +282,7 @@ label {
       Live stream: <span id="streamAddress">http://192.168.29.172:81/stream</span>
     </p>
     <p class="muted">
-      Snapshot: <span id="snapshotAddress">http://192.168.29.172/capture</span>
+      Snapshot: <span id="snapshotAddress">Captured from the live browser stream</span>
     </p>
   </div>
 </aside>
@@ -327,7 +307,6 @@ label {
 
   let cameraIP = "192.168.29.172";
   let streamURL = "";
-  let snapshotURL = "";
   let reconnectTimer = null;
   let recorder = null;
   let recordingChunks = [];
@@ -340,52 +319,128 @@ label {
   let lastFrameTime = 0;
   let cameraConnected = false;
   let autoStopRecording = false;
-  let segmentTimer = null;
-  let userStoppedRecording = false;
-
-  const DEFAULT_WORKER_URL = "https://esp32-cam-cctv-data.ranjith28hero.workers.dev";
-  const DEFAULT_UPLOAD_PASSWORD = "Ranjith28@";
-
-  function cloudStatus(text) {
-    $("cloudStatus").textContent = text;
-  }
-
-  async function uploadBlob(blob, filename) {
-    if (!$("autoUpload").checked) return;
-    const workerURL = ($("workerURL").value.trim() || DEFAULT_WORKER_URL).replace(/\/+$/, "");
-    const password = $("uploadPassword").value || DEFAULT_UPLOAD_PASSWORD;
-    const form = new FormData();
-    form.append("file", blob, filename);
-    form.append("filename", filename);
-    try {
-      cloudStatus("Uploading " + filename + "...");
-      const response = await fetch(workerURL + "/upload", {
-        method: "POST",
-        headers: { "X-Upload-Password": password },
-        body: form
-      });
-      const body = await response.text();
-      let result = {};
-      try { result = body ? JSON.parse(body) : {}; } catch (_) {}
-      if (!response.ok) {
-        const detail = result.details || result.error || body;
-        throw new Error("HTTP " + response.status + (detail ? ": " + String(detail).slice(0, 240) : ""));
-      }
-      if (result.ok === false) throw new Error(result.error || "Worker reported an upload error.");
-      cloudStatus("Upload successful: " + filename + (result.path ? " → " + result.path : ""));
-      message("Uploaded to cloud storage: " + filename);
-    } catch (error) {
-      let detail = error && error.message ? error.message : String(error);
-      if (detail === "Failed to fetch" || /NetworkError|Load failed/i.test(detail)) {
-        detail = "Browser could not reach /upload. Verify the deployed Worker supports POST /upload and OPTIONS CORS preflight; then check DevTools → Network. The root URL alone does not prove /upload works.";
-      }
-      cloudStatus("Upload failed: " + detail);
-      message("Cloud upload failed: " + detail);
-    }
-  }
 
   function message(text) {
     $("message").textContent = text;
+  }
+
+  function setStorageStatus(text, success = false) {
+    const status = $("storageStatus");
+    status.textContent = text;
+    status.className = success ? "green" : "muted";
+  }
+
+  function loadStorageSettings() {
+    try {
+      $("storageEndpoint").value = localStorage.getItem("cctvStorageEndpoint") || "";
+      // Keep the shared upload password only for this browser tab session.
+      $("uploadPassword").value = sessionStorage.getItem("cctvUploadPassword") || "";
+    } catch (error) {
+      setStorageStatus("Browser storage is unavailable. Enter the settings again.");
+    }
+  }
+
+  function saveStorageSettings() {
+    let endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "");
+    endpoint = endpoint.replace(/\/upload$/, "");
+    const password = $("uploadPassword").value;
+
+    if (endpoint) {
+      try {
+        const parsed = new URL(endpoint);
+        if (parsed.protocol !== "https:") {
+          setStorageStatus("Use the HTTPS URL provided by your Cloudflare Worker.");
+          return;
+        }
+      } catch (error) {
+        setStorageStatus("Enter a valid Worker URL.");
+        return;
+      }
+    }
+
+    try {
+      localStorage.setItem("cctvStorageEndpoint", endpoint);
+      sessionStorage.setItem("cctvUploadPassword", password);
+      setStorageStatus(endpoint && password
+        ? "Storage settings saved for this browser session."
+        : "Settings saved. Enter both the Worker URL and upload password before uploading.", true);
+    } catch (error) {
+      setStorageStatus("Could not save settings in this browser.");
+    }
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = String(reader.result || "");
+        const comma = result.indexOf(",");
+        if (comma < 0) reject(new Error("Unable to encode the file."));
+        else resolve(result.slice(comma + 1));
+      };
+      reader.onerror = () => reject(new Error("Unable to read the file."));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadBlobToGitHub(blob, filename, mimeType) {
+    if (!blob) throw new Error("There is no file to upload.");
+    if (blob.size > 8 * 1024 * 1024) {
+      throw new Error("This file is larger than 8 MB. Record a shorter clip or use a smaller snapshot.");
+    }
+
+    const endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "").replace(/\/upload$/, "");
+    const password = $("uploadPassword").value;
+    if (!endpoint || !password) {
+      throw new Error("Set the Worker URL and upload password in the GitHub Storage panel first.");
+    }
+
+    const base64 = await blobToBase64(blob);
+    const response = await fetch(endpoint + "/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + password
+      },
+      body: JSON.stringify({
+        filename,
+        mimeType: mimeType || blob.type || "application/octet-stream",
+        base64
+      })
+    });
+
+    let result = {};
+    try { result = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      throw new Error(result.error || ("Upload failed with HTTP " + response.status + ". Check Worker settings."));
+    }
+    return result;
+  }
+
+  async function uploadSnapshotToGitHub() {
+    getURLs();
+    if (!live.naturalWidth) {
+      message("Connect the camera before uploading a snapshot.");
+      return;
+    }
+
+    const button = $("uploadSnapshotBtn");
+    button.disabled = true;
+    try {
+      drawLiveFrame(recordCtx, recordCanvas);
+      const blob = await new Promise(resolve => recordCanvas.toBlob(resolve, "image/jpeg", 0.9));
+      if (!blob) throw new Error("Snapshot failed. Check camera stream and CORS settings.");
+      const filename = "ESP32CAM-Snapshot-" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
+      message("Uploading snapshot to GitHub...");
+      const result = await uploadBlobToGitHub(blob, filename, "image/jpeg");
+      message("Snapshot saved to GitHub: " + result.path);
+      setStorageStatus("Last upload successful: " + result.path, true);
+    } catch (error) {
+      message("GitHub snapshot upload failed: " + error.message);
+      setStorageStatus("Upload failed: " + error.message);
+    } finally {
+      button.disabled = false;
+    }
   }
 
   function getURLs() {
@@ -396,11 +451,10 @@ label {
     if (!cameraIP) cameraIP = "192.168.29.172";
 
     streamURL = `http://${cameraIP}:81/stream`;
-    snapshotURL = `http://${cameraIP}/capture`;
 
     $("ipLabel").textContent = cameraIP;
     $("streamAddress").textContent = streamURL;
-    $("snapshotAddress").textContent = snapshotURL;
+    $("snapshotAddress").textContent = "Captured directly from the live stream in your browser";
   }
 
   function setStatus(connected, text) {
@@ -424,13 +478,6 @@ label {
     }
 
     if (text) message(text);
-    if (connected && $("continuousRecord").checked && !userStoppedRecording &&
-        (!recorder || recorder.state === "inactive")) {
-      setTimeout(() => {
-        if (cameraConnected && $("continuousRecord").checked && !userStoppedRecording &&
-            (!recorder || recorder.state === "inactive")) startRecording();
-      }, 500);
-    }
   }
 
   function connectCamera() {
@@ -501,7 +548,6 @@ label {
           return;
         }
 
-        uploadBlob(blob, "ESP32CAM-Snapshot-" + Date.now() + ".jpg");
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
@@ -582,13 +628,10 @@ label {
 
       recorder.onstop = () => {
         cancelAnimationFrame(recordingFrame);
-        clearTimeout(segmentTimer);
         stream.getTracks().forEach(track => track.stop());
 
         if (recordingChunks.length > 0) {
           const blob = new Blob(recordingChunks, { type: mimeType });
-          const filename = "ESP32CAM-Recording-" + new Date().toISOString().replace(/[:.]/g, "-") + ".webm";
-          uploadBlob(blob, filename);
           const url = URL.createObjectURL(blob);
 
           savedClips.unshift({
@@ -605,22 +648,11 @@ label {
         }
 
         updateRecordStatus(false);
-        if ($("continuousRecord").checked && !userStoppedRecording) {
-          message("Segment saved. Starting the next recording segment...");
-          setTimeout(() => {
-            if (cameraConnected && $("continuousRecord").checked && !userStoppedRecording &&
-                (!recorder || recorder.state === "inactive")) startRecording();
-          }, 300);
-        }
       };
 
       recorder.start(1000);
-      const segmentMs = Math.max(1, Number($("segmentMinutes").value) || 1) * 60 * 1000;
-      segmentTimer = setTimeout(() => {
-        if (recorder && recorder.state === "recording") stopRecording("segment");
-      }, segmentMs);
       updateRecordStatus(true);
-      message("Recording started. Automatic cloud segments are enabled.");
+      message("Recording started.");
 
       function recordLoop() {
         if (!recorder || recorder.state !== "recording") return;
@@ -648,10 +680,8 @@ label {
     }
   }
 
-  function stopRecording(reason = "manual") {
-    if (reason === "manual") userStoppedRecording = true;
+  function stopRecording() {
     if (recorder && recorder.state !== "inactive") {
-      clearTimeout(segmentTimer);
       recorder.stop();
     } else {
       updateRecordStatus(false);
@@ -695,6 +725,24 @@ label {
       download.download = `ESP32CAM-Recording-${index + 1}.webm`;
       download.textContent = "Download video";
 
+      const upload = document.createElement("button");
+      upload.textContent = "Upload to GitHub";
+      upload.onclick = async () => {
+        upload.disabled = true;
+        try {
+          const filename = "ESP32CAM-Recording-" + new Date().toISOString().replace(/[:.]/g, "-") + ".webm";
+          message("Uploading recording to GitHub...");
+          const result = await uploadBlobToGitHub(clip.blob, filename, "video/webm");
+          message("Recording saved to GitHub: " + result.path);
+          setStorageStatus("Last upload successful: " + result.path, true);
+        } catch (error) {
+          message("Recording upload failed: " + error.message);
+          setStorageStatus("Upload failed: " + error.message);
+        } finally {
+          upload.disabled = false;
+        }
+      };
+
       const remove = document.createElement("button");
       remove.textContent = "Delete";
       remove.onclick = () => {
@@ -711,7 +759,8 @@ label {
 
       item.append(
         title, date, play, document.createTextNode(" "),
-        download, document.createTextNode(" "), remove
+        download, document.createTextNode(" "), upload,
+        document.createTextNode(" "), remove
       );
 
       box.appendChild(item);
@@ -765,9 +814,9 @@ label {
       const quietMs =
         Math.max(2, Number($("quietTime").value) || 10) * 1000;
 
-      if (!$('continuousRecord').checked && recorder && recorder.state === "recording" &&
+      if (recorder && recorder.state === "recording" &&
           Date.now() - lastMotionTime > quietMs) {
-        stopRecording("motion");
+        stopRecording();
       }
 
     } catch (error) {
@@ -804,35 +853,18 @@ label {
   $("connectBtn").addEventListener("click", connectCamera);
   $("refreshBtn").addEventListener("click", connectCamera);
   $("snapshotBtn").addEventListener("click", takeSnapshot);
+  $("uploadSnapshotBtn").addEventListener("click", uploadSnapshotToGitHub);
+  $("saveStorageBtn").addEventListener("click", saveStorageSettings);
 
   $("recordBtn").addEventListener("click", () => {
     if (recorder && recorder.state !== "inactive") {
-      stopRecording("manual");
+      stopRecording();
     } else {
-      userStoppedRecording = false;
       startRecording();
     }
   });
 
-  $("continuousRecord").addEventListener("change", event => {
-    if (event.target.checked) {
-      userStoppedRecording = false;
-      if (cameraConnected && (!recorder || recorder.state === "inactive")) startRecording();
-      message("Continuous recording enabled.");
-    } else {
-      userStoppedRecording = true;
-      clearTimeout(segmentTimer);
-      if (recorder && recorder.state === "recording") stopRecording("setting");
-      message("Continuous recording disabled. Current segment will be saved.");
-    }
-  });
-
   $("saveSettingsBtn").addEventListener("click", connectCamera);
-  $("saveCloudBtn").addEventListener("click", () => {
-    if (!$("workerURL").value.trim()) $("workerURL").value = DEFAULT_WORKER_URL;
-    if (!$("uploadPassword").value) $("uploadPassword").value = DEFAULT_UPLOAD_PASSWORD;
-    cloudStatus("Cloud settings applied. Auto-upload is " + ($("autoUpload").checked ? "enabled." : "disabled."));
-  });
 
   $("motionToggle").addEventListener("change", event => {
     if (event.target.checked) startMotionDetection();
@@ -867,12 +899,9 @@ label {
     clearTimeout(reconnectTimer);
     clearInterval(motionTimer);
     cancelAnimationFrame(recordingFrame);
-    clearTimeout(segmentTimer);
   });
 
-  $("workerURL").value = DEFAULT_WORKER_URL;
-  $("uploadPassword").value = DEFAULT_UPLOAD_PASSWORD;
-  $("autoUpload").checked = true;
+  loadStorageSettings();
   getURLs();
   connectCamera();
 })();
