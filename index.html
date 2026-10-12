@@ -4,306 +4,135 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ESP32-CAM CCTV Monitor</title>
-
 <style>
-:root {
-  --bg: #0b1120;
-  --panel: #151f32;
-  --text: #eaf0ff;
-  --muted: #9ba9c4;
-  --blue: #0284c7;
-  --green: #22c55e;
-  --red: #ef4444;
-}
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Arial, sans-serif;
-}
-header {
-  background: #111a2b;
-  padding: 18px 22px;
-  border-bottom: 1px solid #26344d;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-h1 { font-size: 21px; margin: 0; }
-h2 { font-size: 17px; margin: 0 0 15px; }
-
-main {
-  max-width: 1250px;
-  margin: auto;
-  padding: 20px;
-}
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
-  gap: 18px;
-}
-.panel {
-  background: var(--panel);
-  border: 1px solid #26344d;
-  border-radius: 14px;
-  padding: 17px;
-  margin-bottom: 18px;
-  min-width: 0;
-}
-.camera {
-  width: 100%;
-  min-height: 220px;
-  max-height: 70vh;
-  object-fit: contain;
-  background: #030712;
-  border-radius: 9px;
-}
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 13px;
-}
-button, input {
-  border: 1px solid #34445f;
-  border-radius: 8px;
-  padding: 11px;
-  font-size: 14px;
-}
-button {
-  cursor: pointer;
-  background: #24334d;
-  color: white;
-}
-button:hover { filter: brightness(1.15); }
-.primary { background: #0369a1; }
-.danger { background: #991b1b; }
-input[type="text"], input[type="number"], input[type="password"] {
-  width: 100%;
-  background: #0b1120;
-  color: white;
-  margin: 6px 0 12px;
-}
-input[type="checkbox"], input[type="range"] {
-  accent-color: #38bdf8;
-}
-label {
-  display: block;
-  color: var(--muted);
-  font-size: 13px;
-}
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-.metric {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 11px 0;
-  border-bottom: 1px solid #29364d;
-  font-size: 14px;
-}
-.metric:last-child { border-bottom: 0; }
-.green { color: var(--green); }
-.red { color: #f87171; }
-#statusDot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--red);
-  margin-right: 6px;
-}
-#playback {
-  display: block;
-  width: 100%;
-  max-height: 65vh;
-  margin-top: 12px;
-  background: #030712;
-  border-radius: 8px;
-}
-.clip {
-  padding: 12px 0;
-  border-bottom: 1px solid #29364d;
-  overflow-wrap: anywhere;
-}
-.clip a {
-  color: #38bdf8;
-  display: inline-block;
-  margin: 7px 10px 0 0;
-}
-.clip button { margin: 7px 5px 0 0; }
-.hiddenCanvas { display: none; }
-
-@media(max-width: 760px) {
-  .grid { grid-template-columns: 1fr; }
-  main { padding: 12px; }
-  header { padding: 15px; }
-}
+:root{--bg:#0b1120;--panel:#151f32;--text:#eaf0ff;--muted:#9ba9c4;--blue:#0284c7;--green:#22c55e;--red:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{background:#111a2b;padding:18px 22px;border-bottom:1px solid #26344d;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:21px;margin:0}h2{font-size:17px;margin:0 0 15px}
+main{max-width:1250px;margin:auto;padding:20px}
+.grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:18px}
+.panel{background:var(--panel);border:1px solid #26344d;border-radius:14px;padding:17px;margin-bottom:18px;min-width:0}
+.camera{width:100%;min-height:220px;max-height:70vh;object-fit:contain;background:#030712;border-radius:9px}
+.buttons{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+button,input{border:1px solid #34445f;border-radius:8px;padding:11px;font-size:14px}
+button{cursor:pointer;background:#24334d;color:white}button:hover{filter:brightness(1.15)}button:disabled{opacity:.55;cursor:wait}
+.primary{background:#0369a1}.danger{background:#991b1b}
+input[type=text],input[type=number],input[type=password]{width:100%;background:#0b1120;color:white;margin:6px 0 12px}
+input[type=checkbox],input[type=range]{accent-color:#38bdf8}
+label{display:block;color:var(--muted);font-size:13px}
+.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.metric{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #29364d;font-size:14px}
+.metric:last-child{border-bottom:0}.green{color:var(--green)}.red{color:#f87171}
+#statusDot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);margin-right:6px}
+#playback{display:block;width:100%;max-height:65vh;margin-top:12px;background:#030712;border-radius:8px}
+.clip{padding:12px 0;border-bottom:1px solid #29364d;overflow-wrap:anywhere}
+.clip a{color:#38bdf8;display:inline-block;margin:7px 10px 0 0}.clip button{margin:7px 5px 0 0}
+.hiddenCanvas{display:none}
+@media(max-width:760px){.grid{grid-template-columns:1fr}main{padding:12px}header{padding:15px}}
 </style>
 </head>
-
 <body>
-
 <header>
   <div>
     <h1>📹 ESP32-CAM CCTV Monitor</h1>
-    <div class="muted">
-      Camera IP: <span id="ipLabel">192.168.29.172</span>
-    </div>
+    <div class="muted">Camera IP: <span id="ipLabel">192.168.29.172</span></div>
   </div>
-  <div>
-    <span id="statusDot"></span>
-    <span id="connection">Disconnected</span>
-  </div>
+  <div><span id="statusDot"></span><span id="connection">Disconnected</span></div>
 </header>
 
 <main>
 <div class="grid">
-
 <section>
   <div class="panel">
     <h2>Live Camera</h2>
-
-    <img id="live" class="camera"
-         crossorigin="anonymous"
-         alt="ESP32-CAM live stream">
-
+    <img id="live" class="camera" alt="ESP32-CAM live stream">
     <div class="buttons">
       <button class="primary" id="connectBtn">Start Live View</button>
       <button id="refreshBtn">Reconnect</button>
       <button id="snapshotBtn">Take Snapshot</button>
-      <button class="primary" id="uploadSnapshotBtn">Upload Snapshot to GitHub</button>
       <button class="danger" id="recordBtn">Start Recording</button>
     </div>
-
-    <p class="muted" id="message">Enter the camera IP and connect.</p>
+    <p class="muted" id="message">Ready. Start Live View to connect.</p>
   </div>
 
   <div class="panel">
     <h2>Playback</h2>
     <video id="playback" controls playsinline></video>
-    <div class="buttons">
-      <button id="stopPlaybackBtn">Stop Playback</button>
-    </div>
+    <div class="buttons"><button id="stopPlaybackBtn">Stop Playback</button></div>
     <p class="muted">Choose Play under a saved recording.</p>
   </div>
 
   <div class="panel">
     <h2>Saved Recordings</h2>
-    <div id="recordings">
-      <p class="muted">No recordings yet.</p>
-    </div>
-    <div class="buttons">
-      <button id="clearBtn">Clear Recording List</button>
-    </div>
-    <p class="muted">
-      Recordings remain in browser memory until you close or reload this page. Upload to GitHub or download videos to keep them.
-    </p>
+    <div id="recordings"><p class="muted">No recordings yet.</p></div>
+    <div class="buttons"><button id="clearBtn">Clear Recording List</button></div>
+    <p class="muted">Recordings are kept in this browser tab's memory until the page is closed or reloaded. Download clips or upload them to keep them.</p>
   </div>
 </section>
 
 <aside>
   <div class="panel">
     <h2>Camera Status</h2>
-    <div class="metric">
-      <span>Connection</span><strong id="statusText">Offline</strong>
-    </div>
-    <div class="metric">
-      <span>Recording</span><strong id="recordStatus">Stopped</strong>
-    </div>
-    <div class="metric">
-      <span>Motion Detection</span><strong id="motionStatus">Off</strong>
-    </div>
-    <div class="metric">
-      <span>Last Connected</span><strong id="lastConnected">—</strong>
-    </div>
+    <div class="metric"><span>Connection</span><strong id="statusText">Offline</strong></div>
+    <div class="metric"><span>Recording</span><strong id="recordStatus">Stopped</strong></div>
+    <div class="metric"><span>Motion Detection</span><strong id="motionStatus">Off</strong></div>
+    <div class="metric"><span>Last Connected</span><strong id="lastConnected">—</strong></div>
   </div>
 
   <div class="panel">
     <h2>Camera Settings</h2>
     <label for="cameraIP">ESP32-CAM IP address</label>
     <input id="cameraIP" type="text" value="192.168.29.172">
-
     <label for="reconnectTime">Reconnect interval (seconds)</label>
     <input id="reconnectTime" type="number" min="2" max="60" value="5">
-
     <button class="primary" id="saveSettingsBtn">Apply Settings</button>
-    <p class="muted">
-      Computer and camera should be on the same Wi-Fi network.
-    </p>
+    <p class="muted">Computer and camera should be on the same Wi-Fi network.</p>
   </div>
 
   <div class="panel">
     <h2>GitHub Storage</h2>
     <label for="storageEndpoint">Cloudflare Worker URL</label>
-    <input id="storageEndpoint" type="text" placeholder="https://your-worker.your-subdomain.workers.dev">
-
+    <input id="storageEndpoint" type="text" value="https://esp32-cam-cctv-data.ranjith28hero.workers.dev">
     <label for="uploadPassword">Upload password (Worker secret)</label>
-    <input id="uploadPassword" type="password" placeholder="Enter your upload password" autocomplete="current-password">
-
+    <input id="uploadPassword" type="password" placeholder="Enter upload password" autocomplete="current-password">
     <button class="primary" id="saveStorageBtn">Save Storage Settings</button>
-    <p class="muted" id="storageStatus">Configure the Worker URL and upload password to save media in GitHub.</p>
-    <p class="muted">Uploads are limited to 8 MB each. Keep clips short. The GitHub token is stored only in the Worker, never in this page.</p>
+    <p class="muted" id="storageStatus">Worker URL is prefilled. Enter the upload password to upload media.</p>
+    <p class="muted">Uploads are limited to 8 MB each. Keep clips short. Never put your GitHub token in this page; keep it in the Worker secret settings.</p>
+    <div class="buttons"><button class="primary" id="uploadSnapshotBtn">Upload Snapshot to GitHub</button></div>
   </div>
 
   <div class="panel">
     <h2>Motion Recording</h2>
-
-    <label>
-      <input id="motionToggle" type="checkbox">
-      Enable motion detection
-    </label>
-
-    <p class="muted">
-      Motion detection requires CORS-enabled camera firmware.
-      Keep this page open while recording.
-    </p>
-
+    <label><input id="motionToggle" type="checkbox"> Enable motion detection</label>
+    <p class="muted">Motion detection needs camera firmware that permits browser canvas access (CORS). Keep this page open while monitoring.</p>
     <label for="sensitivity">Motion sensitivity</label>
     <input id="sensitivity" type="range" min="10" max="100" value="30">
-    <p class="muted">
-      Sensitivity: <span id="sensitivityValue">30</span>
-    </p>
-
+    <p class="muted">Sensitivity: <span id="sensitivityValue">30</span></p>
     <label for="quietTime">Stop after no motion (seconds)</label>
     <input id="quietTime" type="number" min="2" max="120" value="10">
   </div>
 
   <div class="panel">
     <h2>Connection URLs</h2>
-    <p class="muted">
-      Live stream: <span id="streamAddress">http://192.168.29.172:81/stream</span>
-    </p>
-    <p class="muted">
-      Snapshot: <span id="snapshotAddress">Captured from the live browser stream</span>
-    </p>
+    <p class="muted">Live stream: <span id="streamAddress">http://192.168.29.172:81/stream</span></p>
+    <p class="muted">Snapshot: Captured from the live browser stream</p>
   </div>
 </aside>
 </div>
 </main>
 
-<!-- Hidden canvases used for snapshots, recording and motion detection -->
 <canvas id="recordCanvas" class="hiddenCanvas" width="640" height="480"></canvas>
 <canvas id="motionCanvas" class="hiddenCanvas" width="320" height="240"></canvas>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
-
   const live = $("live");
   const recordCanvas = $("recordCanvas");
   const recordCtx = recordCanvas.getContext("2d");
   const motionCanvas = $("motionCanvas");
-  const motionCtx = motionCanvas.getContext("2d", {
-    willReadFrequently: true
-  });
+  const motionCtx = motionCanvas.getContext("2d", {willReadFrequently:true});
 
   let cameraIP = "192.168.29.172";
   let streamURL = "";
@@ -316,195 +145,82 @@ label {
   let motionRunning = false;
   let previousFrame = null;
   let lastMotionTime = 0;
-  let lastFrameTime = 0;
-  let cameraConnected = false;
-  let autoStopRecording = false;
+  let streamForRecording = null;
 
-  function message(text) {
-    $("message").textContent = text;
+  function message(text){ $("message").textContent = text; }
+  function setStorageStatus(text, success=false){
+    $("storageStatus").textContent = text;
+    $("storageStatus").className = success ? "green" : "muted";
   }
 
-  function setStorageStatus(text, success = false) {
-    const status = $("storageStatus");
-    status.textContent = text;
-    status.className = success ? "green" : "muted";
-  }
-
-  function loadStorageSettings() {
+  function loadSettings(){
     try {
-      $("storageEndpoint").value = localStorage.getItem("cctvStorageEndpoint") || "";
-      // Keep the shared upload password only for this browser tab session.
+      $("cameraIP").value = localStorage.getItem("cctvCameraIP") || "192.168.29.172";
+      $("reconnectTime").value = localStorage.getItem("cctvReconnectTime") || "5";
+      $("storageEndpoint").value = localStorage.getItem("cctvStorageEndpoint") || "https://esp32-cam-cctv-data.ranjith28hero.workers.dev";
+      // Do not persist the upload password. User enters it per browser session.
       $("uploadPassword").value = sessionStorage.getItem("cctvUploadPassword") || "";
-    } catch (error) {
-      setStorageStatus("Browser storage is unavailable. Enter the settings again.");
-    }
+    } catch(e) {}
   }
 
-  function saveStorageSettings() {
-    let endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "");
-    endpoint = endpoint.replace(/\/upload$/, "");
+  function saveSettings(){
+    getURLs();
+    try {
+      localStorage.setItem("cctvCameraIP", $("cameraIP").value.trim());
+      localStorage.setItem("cctvReconnectTime", $("reconnectTime").value);
+    } catch(e) {}
+    connectCamera();
+  }
+
+  function saveStorageSettings(){
+    let endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "").replace(/\/upload$/, "");
     const password = $("uploadPassword").value;
-
-    if (endpoint) {
-      try {
-        const parsed = new URL(endpoint);
-        if (parsed.protocol !== "https:") {
-          setStorageStatus("Use the HTTPS URL provided by your Cloudflare Worker.");
-          return;
-        }
-      } catch (error) {
-        setStorageStatus("Enter a valid Worker URL.");
-        return;
-      }
-    }
-
+    if (!endpoint) { setStorageStatus("Enter your Cloudflare Worker URL."); return; }
+    try {
+      const parsed = new URL(endpoint);
+      if (parsed.protocol !== "https:") { setStorageStatus("Use the HTTPS URL provided by your Cloudflare Worker."); return; }
+    } catch(e) { setStorageStatus("Enter a valid Worker URL."); return; }
     try {
       localStorage.setItem("cctvStorageEndpoint", endpoint);
-      sessionStorage.setItem("cctvUploadPassword", password);
-      setStorageStatus(endpoint && password
-        ? "Storage settings saved for this browser session."
-        : "Settings saved. Enter both the Worker URL and upload password before uploading.", true);
-    } catch (error) {
-      setStorageStatus("Could not save settings in this browser.");
-    }
+      if (password) sessionStorage.setItem("cctvUploadPassword", password);
+      else sessionStorage.removeItem("cctvUploadPassword");
+      setStorageStatus(password ? "Storage settings saved for this browser session." : "Worker URL saved. Enter the upload password before uploading.", true);
+    } catch(e) { setStorageStatus("Could not save settings in this browser."); }
   }
 
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = String(reader.result || "");
-        const comma = result.indexOf(",");
-        if (comma < 0) reject(new Error("Unable to encode the file."));
-        else resolve(result.slice(comma + 1));
-      };
-      reader.onerror = () => reject(new Error("Unable to read the file."));
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  async function uploadBlobToGitHub(blob, filename, mimeType) {
-    if (!blob) throw new Error("There is no file to upload.");
-    if (blob.size > 8 * 1024 * 1024) {
-      throw new Error("This file is larger than 8 MB. Record a shorter clip or use a smaller snapshot.");
-    }
-
-    const endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "").replace(/\/upload$/, "");
-    const password = $("uploadPassword").value;
-    if (!endpoint || !password) {
-      throw new Error("Set the Worker URL and upload password in the GitHub Storage panel first.");
-    }
-
-    const base64 = await blobToBase64(blob);
-    const response = await fetch(endpoint + "/upload", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + password
-      },
-      body: JSON.stringify({
-        filename,
-        mimeType: mimeType || blob.type || "application/octet-stream",
-        base64
-      })
-    });
-
-    let result = {};
-    try { result = await response.json(); } catch (_) {}
-    if (!response.ok) {
-      throw new Error(result.error || ("Upload failed with HTTP " + response.status + ". Check Worker settings."));
-    }
-    return result;
-  }
-
-  async function uploadSnapshotToGitHub() {
-    getURLs();
-    if (!live.naturalWidth) {
-      message("Connect the camera before uploading a snapshot.");
-      return;
-    }
-
-    const button = $("uploadSnapshotBtn");
-    button.disabled = true;
-    try {
-      drawLiveFrame(recordCtx, recordCanvas);
-      const blob = await new Promise(resolve => recordCanvas.toBlob(resolve, "image/jpeg", 0.9));
-      if (!blob) throw new Error("Snapshot failed. Check camera stream and CORS settings.");
-      const filename = "ESP32CAM-Snapshot-" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
-      message("Uploading snapshot to GitHub...");
-      const result = await uploadBlobToGitHub(blob, filename, "image/jpeg");
-      message("Snapshot saved to GitHub: " + result.path);
-      setStorageStatus("Last upload successful: " + result.path, true);
-    } catch (error) {
-      message("GitHub snapshot upload failed: " + error.message);
-      setStorageStatus("Upload failed: " + error.message);
-    } finally {
-      button.disabled = false;
-    }
-  }
-
-  function getURLs() {
-    cameraIP = $("cameraIP").value.trim()
-      .replace(/^https?:\/\//, "")
-      .replace(/\/+$/, "");
-
+  function getURLs(){
+    cameraIP = $("cameraIP").value.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
     if (!cameraIP) cameraIP = "192.168.29.172";
-
+    // Accept a plain IP/host only; stream endpoint uses port 81.
     streamURL = `http://${cameraIP}:81/stream`;
-
     $("ipLabel").textContent = cameraIP;
     $("streamAddress").textContent = streamURL;
-    $("snapshotAddress").textContent = "Captured directly from the live stream in your browser";
   }
 
-  function setStatus(connected, text) {
-    cameraConnected = connected;
-
-    $("statusDot").style.background =
-      connected ? "#22c55e" : "#ef4444";
-
-    $("connection").textContent =
-      connected ? "Connected" : "Disconnected";
-
-    $("statusText").textContent =
-      connected ? "Online" : "Offline";
-
-    $("statusText").className =
-      connected ? "green" : "red";
-
-    if (connected) {
-      $("lastConnected").textContent =
-        new Date().toLocaleTimeString();
-    }
-
+  function setStatus(connected, text){
+    $("statusDot").style.background = connected ? "#22c55e" : "#ef4444";
+    $("connection").textContent = connected ? "Connected" : "Disconnected";
+    $("statusText").textContent = connected ? "Online" : "Offline";
+    $("statusText").className = connected ? "green" : "red";
+    if (connected) $("lastConnected").textContent = new Date().toLocaleTimeString();
     if (text) message(text);
   }
 
-  function connectCamera() {
+  function connectCamera(){
     getURLs();
     clearTimeout(reconnectTimer);
-
-    live.onload = () => {
-      setStatus(true, "Live stream connected.");
-    };
-
+    live.onload = () => setStatus(true, "Live stream connected.");
     live.onerror = () => {
-      setStatus(false, "Camera stream failed. Reconnecting...");
+      setStatus(false, "Camera stream failed. Check IP/Wi-Fi and reconnecting...");
+      scheduleReconnect();
     };
-
     live.src = streamURL + "?t=" + Date.now();
-
     scheduleReconnect();
   }
 
-  function scheduleReconnect() {
+  function scheduleReconnect(){
     clearTimeout(reconnectTimer);
-
-    const seconds = Math.max(
-      2,
-      Math.min(60, Number($("reconnectTime").value) || 5)
-    );
-
+    const seconds = Math.max(2, Math.min(60, Number($("reconnectTime").value) || 5));
     reconnectTimer = setTimeout(() => {
       if (!live.complete || live.naturalWidth === 0) {
         setStatus(false, "Reconnecting to camera...");
@@ -512,397 +228,259 @@ label {
       } else {
         setStatus(true, "Camera stream is running.");
       }
-
       scheduleReconnect();
     }, seconds * 1000);
   }
 
-  function drawLiveFrame(ctx, canvas) {
-    if (!live.naturalWidth || !live.naturalHeight) {
-      throw new Error("Camera is not streaming.");
-    }
-
-    if (canvas.width !== live.naturalWidth ||
-        canvas.height !== live.naturalHeight) {
+  function drawLiveFrame(ctx, canvas){
+    if (!live.naturalWidth || !live.naturalHeight) throw new Error("Camera is not streaming.");
+    if (canvas.width !== live.naturalWidth || canvas.height !== live.naturalHeight) {
       canvas.width = live.naturalWidth;
       canvas.height = live.naturalHeight;
     }
-
     ctx.drawImage(live, 0, 0, canvas.width, canvas.height);
   }
 
-  function takeSnapshot() {
-    getURLs();
-
-    if (!live.naturalWidth) {
-      message("Connect the camera before taking a snapshot.");
-      return;
-    }
-
+  function takeSnapshot(){
+    if (!live.naturalWidth) { message("Connect the camera before taking a snapshot."); return; }
     try {
       drawLiveFrame(recordCtx, recordCanvas);
-
       recordCanvas.toBlob(blob => {
-        if (!blob) {
-          message("Snapshot failed. Check camera CORS settings.");
-          return;
-        }
-
+        if (!blob) { message("Snapshot failed. Camera CORS may be blocking canvas access."); return; }
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "ESP32CAM-Snapshot-" + Date.now() + ".jpg";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
+        document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
         message("Snapshot downloaded.");
       }, "image/jpeg", 0.92);
-
-    } catch (error) {
-      message("Snapshot failed: " + error.message +
-        ". Check CORS firmware.");
-    }
+    } catch(e) { message("Snapshot failed: " + e.message + ". Camera firmware may need CORS support."); }
   }
 
-  function updateRecordStatus(active) {
+  function blobToBase64(blob){
+    return new Promise((resolve,reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = String(reader.result || "");
+        const comma = result.indexOf(",");
+        if (comma < 0) reject(new Error("Unable to encode file."));
+        else resolve(result.slice(comma + 1));
+      };
+      reader.onerror = () => reject(new Error("Unable to read file."));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadBlobToGitHub(blob, filename, mimeType){
+    if (!blob) throw new Error("There is no file to upload.");
+    if (blob.size > 8 * 1024 * 1024) throw new Error("File is larger than 8 MB. Use a shorter clip or smaller snapshot.");
+    const endpoint = $("storageEndpoint").value.trim().replace(/\/+$/, "").replace(/\/upload$/, "");
+    const password = $("uploadPassword").value || sessionStorage.getItem("cctvUploadPassword") || "";
+    if (!endpoint || !password) throw new Error("Set the Worker URL and enter the upload password in GitHub Storage first.");
+    const base64 = await blobToBase64(blob);
+    const response = await fetch(endpoint + "/upload", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer " + password},
+      body:JSON.stringify({filename, mimeType:mimeType || blob.type || "application/octet-stream", base64})
+    });
+    let result = {};
+    try { result = await response.json(); } catch(e) {}
+    if (!response.ok) throw new Error(result.error || ("Upload failed with HTTP " + response.status + ". Check Worker configuration."));
+    return result;
+  }
+
+  async function uploadSnapshotToGitHub(){
+    if (!live.naturalWidth) { message("Connect the camera before uploading a snapshot."); return; }
+    const button = $("uploadSnapshotBtn"); button.disabled = true;
+    try {
+      drawLiveFrame(recordCtx, recordCanvas);
+      const blob = await new Promise(resolve => recordCanvas.toBlob(resolve, "image/jpeg", 0.9));
+      if (!blob) throw new Error("Snapshot failed. Camera CORS may be blocking canvas access.");
+      const filename = "ESP32CAM-Snapshot-" + new Date().toISOString().replace(/[:.]/g, "-") + ".jpg";
+      message("Uploading snapshot to GitHub...");
+      const result = await uploadBlobToGitHub(blob, filename, "image/jpeg");
+      message("Snapshot uploaded: " + (result.path || filename));
+      setStorageStatus("Last upload successful: " + (result.path || filename), true);
+    } catch(e) {
+      message("Snapshot upload failed: " + e.message);
+      setStorageStatus("Upload failed: " + e.message);
+    } finally { button.disabled = false; }
+  }
+
+  function updateRecordStatus(active){
     $("recordStatus").textContent = active ? "Recording" : "Stopped";
     $("recordStatus").className = active ? "red" : "";
-    $("recordBtn").textContent =
-      active ? "Stop Recording" : "Start Recording";
+    $("recordBtn").textContent = active ? "Stop Recording" : "Start Recording";
     $("recordBtn").className = active ? "danger" : "primary";
   }
 
-  function startRecording() {
+  function startRecording(){
     if (recorder && recorder.state !== "inactive") return;
-
-    if (!live.naturalWidth) {
-      message("Connect the camera before recording.");
-      return;
-    }
-
-    if (!window.MediaRecorder || !recordCanvas.captureStream) {
-      message("Recording is not supported in this browser.");
-      return;
-    }
-
-    let stream;
-
+    if (!live.naturalWidth) { message("Connect the camera before recording."); return; }
+    if (!window.MediaRecorder || !recordCanvas.captureStream) { message("Recording is not supported in this browser."); return; }
+    let capture;
     try {
       drawLiveFrame(recordCtx, recordCanvas);
-
-      stream = recordCanvas.captureStream(10);
-
-      const supportedTypes = [
-        "video/webm;codecs=vp9",
-        "video/webm;codecs=vp8",
-        "video/webm"
-      ];
-
-      const mimeType = supportedTypes.find(type =>
-        MediaRecorder.isTypeSupported(type)
-      );
-
-      if (!mimeType) {
-        stream.getTracks().forEach(track => track.stop());
-        message("This browser does not support WebM recording.");
-        return;
-      }
-
+      capture = recordCanvas.captureStream(10);
+      const types = ["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"];
+      const mimeType = types.find(t => MediaRecorder.isTypeSupported(t));
+      if (!mimeType) { capture.getTracks().forEach(t => t.stop()); message("WebM recording is not supported by this browser."); return; }
+      streamForRecording = capture;
       recordingChunks = [];
-      autoStopRecording = false;
-
-      recorder = new MediaRecorder(stream, { mimeType });
-
-      recorder.ondataavailable = event => {
-        if (event.data && event.data.size > 0) {
-          recordingChunks.push(event.data);
-        }
-      };
-
-      recorder.onerror = event => {
-        message("Recording error: " +
-          (event.error?.message || "Unknown error"));
-      };
-
+      recorder = new MediaRecorder(capture, {mimeType});
+      recorder.ondataavailable = e => { if (e.data && e.data.size) recordingChunks.push(e.data); };
+      recorder.onerror = e => message("Recording error: " + (e.error?.message || "Unknown error"));
       recorder.onstop = () => {
         cancelAnimationFrame(recordingFrame);
-        stream.getTracks().forEach(track => track.stop());
-
-        if (recordingChunks.length > 0) {
-          const blob = new Blob(recordingChunks, { type: mimeType });
+        if (streamForRecording) streamForRecording.getTracks().forEach(t => t.stop());
+        streamForRecording = null;
+        if (recordingChunks.length) {
+          const blob = new Blob(recordingChunks, {type:mimeType});
           const url = URL.createObjectURL(blob);
-
-          savedClips.unshift({
-            name: "CCTV-" + new Date().toLocaleString(),
-            time: new Date().toLocaleString(),
-            blob,
-            url
-          });
-
+          savedClips.unshift({name:"CCTV-" + new Date().toLocaleString(),time:new Date().toLocaleString(),blob,url});
           renderRecordings();
-          message("Recording finished. Play or download your clip.");
-        } else {
-          message("No video data was recorded.");
-        }
-
+          message("Recording finished. Play, download, or upload your clip.");
+        } else message("No video data was recorded.");
         updateRecordStatus(false);
       };
-
       recorder.start(1000);
       updateRecordStatus(true);
       message("Recording started.");
-
-      function recordLoop() {
+      function loop(){
         if (!recorder || recorder.state !== "recording") return;
-
-        try {
-          drawLiveFrame(recordCtx, recordCanvas);
-        } catch (error) {
-          message("Cannot read camera frames. Check CORS firmware.");
-          stopRecording();
-          return;
-        }
-
-        recordingFrame = requestAnimationFrame(recordLoop);
+        try { drawLiveFrame(recordCtx, recordCanvas); }
+        catch(e) { message("Cannot read camera frames. Check camera CORS firmware."); stopRecording(); return; }
+        recordingFrame = requestAnimationFrame(loop);
       }
-
-      recordLoop();
-
-    } catch (error) {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      message("Recording failed: " + error.message +
-        ". Check camera CORS settings.");
+      loop();
+    } catch(e) {
+      if (capture) capture.getTracks().forEach(t => t.stop());
+      message("Recording failed: " + e.message + ". Camera firmware may need CORS support.");
     }
   }
 
-  function stopRecording() {
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-    } else {
-      updateRecordStatus(false);
-    }
+  function stopRecording(){
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    else updateRecordStatus(false);
   }
 
-  function renderRecordings() {
-    const box = $("recordings");
-    box.replaceChildren();
-
+  function renderRecordings(){
+    const box = $("recordings"); box.replaceChildren();
     if (!savedClips.length) {
-      const p = document.createElement("p");
-      p.className = "muted";
-      p.textContent = "No recordings yet.";
-      box.appendChild(p);
-      return;
+      const p = document.createElement("p"); p.className = "muted"; p.textContent = "No recordings yet."; box.appendChild(p); return;
     }
-
-    savedClips.forEach((clip, index) => {
-      const item = document.createElement("div");
-      item.className = "clip";
-
-      const title = document.createElement("strong");
-      title.textContent = clip.name;
-
-      const date = document.createElement("p");
-      date.className = "muted";
-      date.textContent = clip.time;
-
-      const play = document.createElement("button");
-      play.textContent = "Play";
-      play.onclick = () => {
-        $("playback").src = clip.url;
-        $("playback").play().catch(() => {
-          message("Press Play on the video controls to start playback.");
-        });
-      };
-
-      const download = document.createElement("a");
-      download.href = clip.url;
-      download.download = `ESP32CAM-Recording-${index + 1}.webm`;
-      download.textContent = "Download video";
-
-      const upload = document.createElement("button");
-      upload.textContent = "Upload to GitHub";
+    savedClips.forEach((clip,index) => {
+      const item = document.createElement("div"); item.className = "clip";
+      const title = document.createElement("strong"); title.textContent = clip.name;
+      const date = document.createElement("p"); date.className = "muted"; date.textContent = clip.time;
+      const play = document.createElement("button"); play.textContent = "Play";
+      play.onclick = () => { $("playback").src = clip.url; $("playback").play().catch(() => message("Press Play on the video controls.")); };
+      const download = document.createElement("a"); download.href = clip.url; download.download = `ESP32CAM-Recording-${index+1}.webm`; download.textContent = "Download video";
+      const upload = document.createElement("button"); upload.textContent = "Upload to GitHub";
       upload.onclick = async () => {
         upload.disabled = true;
         try {
           const filename = "ESP32CAM-Recording-" + new Date().toISOString().replace(/[:.]/g, "-") + ".webm";
-          message("Uploading recording to GitHub...");
+          message("Uploading recording...");
           const result = await uploadBlobToGitHub(clip.blob, filename, "video/webm");
-          message("Recording saved to GitHub: " + result.path);
-          setStorageStatus("Last upload successful: " + result.path, true);
-        } catch (error) {
-          message("Recording upload failed: " + error.message);
-          setStorageStatus("Upload failed: " + error.message);
-        } finally {
-          upload.disabled = false;
-        }
+          message("Recording uploaded: " + (result.path || filename));
+          setStorageStatus("Last upload successful: " + (result.path || filename), true);
+        } catch(e) { message("Recording upload failed: " + e.message); setStorageStatus("Upload failed: " + e.message); }
+        finally { upload.disabled = false; }
       };
-
-      const remove = document.createElement("button");
-      remove.textContent = "Delete";
+      const remove = document.createElement("button"); remove.textContent = "Delete";
       remove.onclick = () => {
-        if ($("playback").src === clip.url) {
-          $("playback").pause();
-          $("playback").removeAttribute("src");
-          $("playback").load();
-        }
-
+        const player = $("playback");
+        if (player.src === clip.url) { player.pause(); player.removeAttribute("src"); player.load(); }
         URL.revokeObjectURL(clip.url);
-        savedClips = savedClips.filter(item => item !== clip);
-        renderRecordings();
+        savedClips = savedClips.filter(x => x !== clip); renderRecordings();
       };
-
-      item.append(
-        title, date, play, document.createTextNode(" "),
-        download, document.createTextNode(" "), upload,
-        document.createTextNode(" "), remove
-      );
-
+      item.append(title,date,play,document.createTextNode(" "),download,document.createTextNode(" "),upload,document.createTextNode(" "),remove);
       box.appendChild(item);
     });
   }
 
-  function detectMotion() {
+  function detectMotion(){
     if (!motionRunning || !live.naturalWidth) return;
-
     try {
-      motionCtx.drawImage(live, 0, 0,
-        motionCanvas.width, motionCanvas.height);
-
-      const frame = motionCtx.getImageData(
-        0, 0, motionCanvas.width, motionCanvas.height
-      );
-
-      let changed = 0;
-      let compared = 0;
+      motionCtx.drawImage(live,0,0,motionCanvas.width,motionCanvas.height);
+      const frame = motionCtx.getImageData(0,0,motionCanvas.width,motionCanvas.height);
+      let changed = 0, compared = 0;
       const threshold = Number($("sensitivity").value) || 30;
-
       if (previousFrame) {
-        for (let i = 0; i < frame.data.length; i += 16) {
-          const difference =
-            Math.abs(frame.data[i] - previousFrame.data[i]) +
-            Math.abs(frame.data[i + 1] - previousFrame.data[i + 1]) +
-            Math.abs(frame.data[i + 2] - previousFrame.data[i + 2]);
-
-          if (difference > threshold * 3) changed++;
+        for (let i=0;i<frame.data.length;i+=16) {
+          const diff = Math.abs(frame.data[i]-previousFrame.data[i]) +
+            Math.abs(frame.data[i+1]-previousFrame.data[i+1]) +
+            Math.abs(frame.data[i+2]-previousFrame.data[i+2]);
+          if (diff > threshold*3) changed++;
           compared++;
         }
       }
-
       previousFrame = frame;
-
-      const ratio = compared ? changed / compared : 0;
-
+      const ratio = compared ? changed/compared : 0;
       if (ratio > 0.035) {
         lastMotionTime = Date.now();
         $("motionStatus").textContent = "Motion detected";
         $("motionStatus").className = "green";
-
-        if (!recorder || recorder.state === "inactive") {
-          startRecording();
-        }
+        if (!recorder || recorder.state === "inactive") startRecording();
       } else {
         $("motionStatus").textContent = "Monitoring";
         $("motionStatus").className = "";
       }
-
-      const quietMs =
-        Math.max(2, Number($("quietTime").value) || 10) * 1000;
-
-      if (recorder && recorder.state === "recording" &&
-          Date.now() - lastMotionTime > quietMs) {
-        stopRecording();
-      }
-
-    } catch (error) {
+      const quietMs = Math.max(2,Number($("quietTime").value)||10)*1000;
+      if (recorder && recorder.state === "recording" && Date.now()-lastMotionTime > quietMs) stopRecording();
+    } catch(e) {
       $("motionStatus").textContent = "CORS error";
       message("Motion detection needs CORS-enabled camera firmware.");
       stopMotionDetection();
     }
   }
 
-  function startMotionDetection() {
+  function startMotionDetection(){
     stopMotionDetection();
-
-    motionRunning = true;
-    previousFrame = null;
-    lastMotionTime = Date.now();
-
+    motionRunning = true; previousFrame = null; lastMotionTime = Date.now();
     $("motionToggle").checked = true;
     $("motionStatus").textContent = "Monitoring";
-
-    motionTimer = setInterval(detectMotion, 500);
+    motionTimer = setInterval(detectMotion,500);
     message("Motion detection enabled.");
   }
 
-  function stopMotionDetection() {
-    motionRunning = false;
-    clearInterval(motionTimer);
-    motionTimer = null;
-    previousFrame = null;
-
-    $("motionToggle").checked = false;
-    $("motionStatus").textContent = "Off";
+  function stopMotionDetection(){
+    motionRunning = false; clearInterval(motionTimer); motionTimer = null; previousFrame = null;
+    $("motionToggle").checked = false; $("motionStatus").textContent = "Off";
   }
 
-  $("connectBtn").addEventListener("click", connectCamera);
-  $("refreshBtn").addEventListener("click", connectCamera);
-  $("snapshotBtn").addEventListener("click", takeSnapshot);
-  $("uploadSnapshotBtn").addEventListener("click", uploadSnapshotToGitHub);
-  $("saveStorageBtn").addEventListener("click", saveStorageSettings);
-
-  $("recordBtn").addEventListener("click", () => {
-    if (recorder && recorder.state !== "inactive") {
-      stopRecording();
-    } else {
-      startRecording();
-    }
+  $("connectBtn").addEventListener("click",connectCamera);
+  $("refreshBtn").addEventListener("click",connectCamera);
+  $("snapshotBtn").addEventListener("click",takeSnapshot);
+  $("uploadSnapshotBtn").addEventListener("click",uploadSnapshotToGitHub);
+  $("saveStorageBtn").addEventListener("click",saveStorageSettings);
+  $("saveSettingsBtn").addEventListener("click",saveSettings);
+  $("recordBtn").addEventListener("click",() => {
+    if (recorder && recorder.state !== "inactive") stopRecording(); else startRecording();
   });
-
-  $("saveSettingsBtn").addEventListener("click", connectCamera);
-
-  $("motionToggle").addEventListener("change", event => {
-    if (event.target.checked) startMotionDetection();
-    else stopMotionDetection();
+  $("motionToggle").addEventListener("change",e => {
+    if (e.target.checked) startMotionDetection(); else stopMotionDetection();
   });
-
-  $("sensitivity").addEventListener("input", event => {
-    $("sensitivityValue").textContent = event.target.value;
+  $("sensitivity").addEventListener("input",e => $("sensitivityValue").textContent=e.target.value);
+  $("stopPlaybackBtn").addEventListener("click",() => {
+    const player=$("playback"); player.pause(); player.removeAttribute("src"); player.load();
   });
-
-  $("stopPlaybackBtn").addEventListener("click", () => {
-    const player = $("playback");
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
-  });
-
-  $("clearBtn").addEventListener("click", () => {
+  $("clearBtn").addEventListener("click",() => {
     if (!confirm("Delete all recordings from this page?")) return;
-
-    const player = $("playback");
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
-
-    savedClips.forEach(clip => URL.revokeObjectURL(clip.url));
-    savedClips = [];
-    renderRecordings();
+    const player=$("playback"); player.pause(); player.removeAttribute("src"); player.load();
+    savedClips.forEach(c=>URL.revokeObjectURL(c.url)); savedClips=[]; renderRecordings();
+  });
+  window.addEventListener("beforeunload",() => {
+    clearTimeout(reconnectTimer); clearInterval(motionTimer); cancelAnimationFrame(recordingFrame);
+    if (streamForRecording) streamForRecording.getTracks().forEach(t=>t.stop());
+    savedClips.forEach(c=>URL.revokeObjectURL(c.url));
   });
 
-  window.addEventListener("beforeunload", () => {
-    clearTimeout(reconnectTimer);
-    clearInterval(motionTimer);
-    cancelAnimationFrame(recordingFrame);
-  });
-
-  loadStorageSettings();
+  loadSettings();
   getURLs();
+  // Auto-connect on page load. Remove this call if you prefer manual Start Live View.
   connectCamera();
 })();
 </script>
